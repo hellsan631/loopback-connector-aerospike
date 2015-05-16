@@ -1,4 +1,4 @@
-# loopback-connector-aerospike
+# loopback-connector-aerospike [![Build Status](https://travis-ci.org/hellsan631/loopback-connector-aerospike.svg)](https://travis-ci.org/hellsan631/loopback-connector-aerospike)
 Connect Loopback to an Aerospike Database
 
 ###Notes (development reading)
