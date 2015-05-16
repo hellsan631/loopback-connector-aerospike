@@ -1,0 +1,7 @@
+{
+"content": [
+    {"title": "LoopBack Aerospike Connector API", "depth": 2},
+    "lib/aerospike.js"
+  ],
+  "codeSectionDepth": 3
+}

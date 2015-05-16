@@ -1,0 +1,29 @@
+{
+  "name": "loopback-connector-aerospike",
+  "version": "0.0.1",
+  "description": "LoopBack Aerospike Connector",
+  "keywords": [
+    "StrongLoop",
+    "LoopBack",
+    "Aerospike",
+    "DataSource",
+    "Connector"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "dependencies": {
+    "aerospike": "^1.0.39",
+    "async": "^0.9.0",
+    "debug": "^2.1.1",
+    "loopback-connector": "1.x"
+  },
+  "devDependencies": {
+    "loopback-datasource-juggler": "^2.15.0",
+    "mocha": "^2.1.0",
+    "rc": "^1.0.0",
+    "should": "^5.0.0",
+    "sinon": "^1.14.1"
+  }
+}
