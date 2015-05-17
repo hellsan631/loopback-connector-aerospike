@@ -1,7 +1,5 @@
 language: node_js
 node_js:
-  - 0.10
-  - 0.11
   - 0.12
 install:
   - sudo apt-get install autoconf libssl-dev liblua5.1 liblua5.1-dev
