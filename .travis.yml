@@ -10,7 +10,7 @@ install:
   - cp -f .travis/aerospike.conf ./aerospike-server/share/etc
   - cd aerospike-server
   - mkdir instance
-  - ./bin/aerospike init --home instance --instance --service-port 3000
+  - ./bin/aerospike init --home instance1 --instance 1 --service-port 3000
   - cd instance1
   - sudo ./bin/aerospike start
   - cd ..
