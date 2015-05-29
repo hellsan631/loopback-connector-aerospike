@@ -102,8 +102,11 @@ describe('Aerospike connector', function () {
 
   describe('.ping(cb)', function() {
     it('should return true for valid connection', function(done) {
-      db.ping(done);
-      
+      db.ping(function(success) {
+          should(success).be.ok;
+          done();
+      });
+
     });
 
     it('should report connection errors', function(done) {
@@ -111,10 +114,10 @@ describe('Aerospike connector', function () {
         host: 'localhost',
         port: 4 // unassigned by IANA
       });
-      ds.ping(function(err) {
-        (!!err).should.be.true;
-        err.message.should.match(/connect ECONNREFUSED/);
-        done();
+      ds.ping(function(success) {
+          console.log(success);
+          should(success).not.be.ok;
+          done();
       });
     });
   });
