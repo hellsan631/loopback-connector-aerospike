@@ -22,21 +22,6 @@ describe('Aerospike connector', function () {
     //     }
     //   });
     //
-    //   Superhero = db.define('Superhero', {
-    //     name: { type: String, index: true },
-    //     power: { type: String, index: true, unique: true },
-    //     address: { type: String, required: false },
-    //     description: { type: String, required: false },
-    //     age: Number,
-    //     icon: Buffer
-    //   });
-    //
-    //   Post = db.define('Post', {
-    //     title: { type: String, length: 255, index: true },
-    //     content: { type: String },
-    //     comments: [String]
-    //   });
-    //
     //   Product = db.define('Product', {
     //     name: { type: String, length: 255, index: true },
     //     description:{ type: String},
@@ -132,9 +117,13 @@ describe('Aerospike connector', function () {
                 title: { type: String, length: 255},
                 content: { type: String },
                 comments: [String]
+            }, {
+                aerospike: {
+                    idField: 'title'
+                }
             });
         });
-        it('should define a model with basic indexes', function() {
+        it('define a model with basic indexes', function() {
             Superhero = db.define('Superhero', {
                 name: { type: String, index: true },
                 power: { type: String, index: true, unique: true },
@@ -146,110 +135,26 @@ describe('Aerospike connector', function () {
         });
     });
 
-    it('should have created models with correct _id types', function (done) {
-        PostWithObjectId.definition.properties._id.type.should.be.equal(db.ObjectID);
-        should.not.exist(PostWithObjectId.definition.properties.id);
-        PostWithNumberUnderscoreId.definition.properties._id.type.should.be.equal(Number);
-        should.not.exist(PostWithNumberUnderscoreId.definition.properties.id);
-
-        done();
-    });
-
-    it('should handle correctly type Number for id field _id', function (done) {
-        PostWithNumberUnderscoreId.create({_id: 3, content: "test"}, function (err, person) {
-            should.not.exist(err);
-            person._id.should.be.equal(3);
-
-            PostWithNumberUnderscoreId.findById(person._id, function (err, p) {
+    describe('Model instance creation', function() {
+        it('create should return post with added id field', function (done) {
+            Post.create({title: 'Post1', content: 'Post content'}, function (err, post) {
                 should.not.exist(err);
-                p.content.should.be.equal("test");
+                should.exist(post.id);
+                should.exist(post.title);
+                should.exist(post.content);
 
                 done();
             });
         });
-    });
-
-    it('should handle correctly type Number for id field _id using string', function (done) {
-        PostWithNumberUnderscoreId.create({_id: 4, content: "test"}, function (err, person) {
-            should.not.exist(err);
-            person._id.should.be.equal(4);
-
-            PostWithNumberUnderscoreId.findById('4', function (err, p) {
+        it('create should return post with provided id field', function (done) {
+            Post.create({id:'foo', title: 'Post2', content: 'Post content'}, function (err, post) {
                 should.not.exist(err);
-                p.content.should.be.equal("test");
+                should.exist(post.id);
+                should.exist(post.title);
+                should.exist(post.content);
 
                 done();
             });
-        });
-    });
-
-    it('should allow to find post by id string if `_id` is defined id', function (done) {
-        PostWithObjectId.create(function (err, post) {
-            PostWithObjectId.find({where: {_id: post._id.toString()}}, function (err, p) {
-                should.not.exist(err);
-                post = p[0];
-                should.exist(post);
-                post._id.should.be.an.instanceOf(db.ObjectID);
-
-                done();
-            });
-        });
-    });
-
-    it('find with `_id` as defined id should return an object with _id instanceof ObjectID', function (done) {
-        PostWithObjectId.create(function (err, post) {
-            PostWithObjectId.findById(post._id, function (err, post) {
-                should.not.exist(err);
-                post._id.should.be.an.instanceOf(db.ObjectID);
-
-                done();
-            });
-
-        });
-    });
-
-    it('should update the instance with `_id` as defined id', function (done) {
-        PostWithObjectId.create({title: 'a', content: 'AAA'}, function (err, post) {
-            post.title = 'b';
-            PostWithObjectId.updateOrCreate(post, function (err, p) {
-                should.not.exist(err);
-                p._id.should.be.equal(post._id);
-
-                PostWithObjectId.findById(post._id, function (err, p) {
-                    should.not.exist(err);
-                    p._id.should.be.eql(post._id);
-                    p.content.should.be.equal(post.content);
-                    p.title.should.be.equal('b');
-                });
-
-                PostWithObjectId.find({where: {title: 'b'}}, function (err, posts) {
-                    should.not.exist(err);
-                    p = posts[0];
-                    p._id.should.be.eql(post._id);
-                    p.content.should.be.equal(post.content);
-                    p.title.should.be.equal('b');
-                    posts.should.have.lengthOf(1);
-                    done();
-                });
-            });
-
-        });
-    });
-
-    it('all should return object (with `_id` as defined id) with an _id instanceof ObjectID', function (done) {
-        var post = new PostWithObjectId({title: 'a', content: 'AAA'})
-        post.save(function (err, post) {
-            PostWithObjectId.all({where: {title: 'a'}}, function (err, posts) {
-                should.not.exist(err);
-                posts.should.have.lengthOf(1);
-                post = posts[0];
-                post.should.have.property('title', 'a');
-                post.should.have.property('content', 'AAA');
-                post._id.should.be.an.instanceOf(db.ObjectID);
-
-                done();
-            });
-
         });
     });
 

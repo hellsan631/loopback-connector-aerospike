@@ -6,6 +6,7 @@ var config = require('rc')('loopback', {test: {aerospike: {
     debug: {
         enabled: true
     },
+    namespace: 'test',
     host: 'localhost',
     port: 3000
 }}}).test.aerospike;
