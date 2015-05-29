@@ -5,96 +5,108 @@ var Superhero, User, Post, PostWithStringId, db;
 
 describe('Aerospike connector', function () {
 
-  before(function () {
-    db = getDataSource();
+  // before(function (done) {
+  //
+  //
+  //   User = db.define('User', {
+  //     name: { type: String, index: true },
+  //     email: { type: String, index: true, unique: true },
+  //     age: Number,
+  //     icon: Buffer
+  //   }, {
+  //     indexes: {
+  //       name_age_index: {
+  //         keys: {name: 1, age: -1}
+  //       }, // The value contains keys and optinally options
+  //       age_index: {age: -1} // The value itself is for keys
+  //     }
+  //   });
+  //
+  //   Superhero = db.define('Superhero', {
+  //     name: { type: String, index: true },
+  //     power: { type: String, index: true, unique: true },
+  //     address: { type: String, required: false },
+  //     description: { type: String, required: false },
+  //     age: Number,
+  //     icon: Buffer
+  //   });
+  //
+  //   Post = db.define('Post', {
+  //     title: { type: String, length: 255, index: true },
+  //     content: { type: String },
+  //     comments: [String]
+  //   });
+  //
+  //   Product = db.define('Product', {
+  //     name: { type: String, length: 255, index: true },
+  //     description:{ type: String},
+  //     price: { type: Number },
+  //     pricehistory: { type: Object }
+  //   }, {
+  //     mongodb: {
+  //       collection: 'ProductCollection' // Customize the collection name
+  //     }
+  //   });
+  //
+  //   PostWithStringId = db.define('PostWithStringId', {
+  //     id: {type: String, id: true},
+  //     title: { type: String, length: 255, index: true },
+  //     content: { type: String }
+  //   });
+  //
+  //   PostWithObjectId = db.define('PostWithObjectId', {
+  //     _id: {type: db.ObjectID, id: true},
+  //     title: { type: String, length: 255, index: true },
+  //     content: { type: String }
+  //   });
+  //
+  //   PostWithNumberUnderscoreId = db.define('PostWithNumberUnderscoreId', {
+  //     _id: {type: Number, id: true},
+  //     title: { type: String, length: 255, index: true },
+  //     content: { type: String }
+  //   });
+  //
+  //   PostWithNumberId = db.define('PostWithNumberId', {
+  //     id: {type: Number, id: true},
+  //     title: { type: String, length: 255, index: true },
+  //     content: { type: String }
+  //   });
+  //
+  //   User.hasMany(Post);
+  //   Post.belongsTo(User);
+  // });
+  //
+  // beforeEach(function (done) {
+  //   User.destroyAll(function () {
+  //     Post.destroyAll(function () {
+  //       PostWithObjectId.destroyAll(function () {
+  //         PostWithNumberId.destroyAll(function () {
+  //           PostWithNumberUnderscoreId.destroyAll(function () {
+  //             PostWithStringId.destroyAll(function () {
+  //               done();
+  //             });
+  //           });
+  //         });
+  //       });
+  //     });
+  //   });
+  // });
 
-    User = db.define('User', {
-      name: { type: String, index: true },
-      email: { type: String, index: true, unique: true },
-      age: Number,
-      icon: Buffer
-    }, {
-      indexes: {
-        name_age_index: {
-          keys: {name: 1, age: -1}
-        }, // The value contains keys and optinally options
-        age_index: {age: -1} // The value itself is for keys
-      }
-    });
-
-    Superhero = db.define('Superhero', {
-      name: { type: String, index: true },
-      power: { type: String, index: true, unique: true },
-      address: { type: String, required: false },
-      description: { type: String, required: false },
-      age: Number,
-      icon: Buffer
-    });
-
-    Post = db.define('Post', {
-      title: { type: String, length: 255, index: true },
-      content: { type: String },
-      comments: [String]
-    });
-
-    Product = db.define('Product', {
-      name: { type: String, length: 255, index: true },
-      description:{ type: String},
-      price: { type: Number },
-      pricehistory: { type: Object }
-    }, {
-      mongodb: {
-        collection: 'ProductCollection' // Customize the collection name
-      }
-    });
-
-    PostWithStringId = db.define('PostWithStringId', {
-      id: {type: String, id: true},
-      title: { type: String, length: 255, index: true },
-      content: { type: String }
-    });
-
-    PostWithObjectId = db.define('PostWithObjectId', {
-      _id: {type: db.ObjectID, id: true},
-      title: { type: String, length: 255, index: true },
-      content: { type: String }
-    });
-
-    PostWithNumberUnderscoreId = db.define('PostWithNumberUnderscoreId', {
-      _id: {type: Number, id: true},
-      title: { type: String, length: 255, index: true },
-      content: { type: String }
-    });
-
-    PostWithNumberId = db.define('PostWithNumberId', {
-      id: {type: Number, id: true},
-      title: { type: String, length: 255, index: true },
-      content: { type: String }
-    });
-
-    User.hasMany(Post);
-    Post.belongsTo(User);
-  });
-
-  beforeEach(function (done) {
-    User.destroyAll(function () {
-      Post.destroyAll(function () {
-        PostWithObjectId.destroyAll(function () {
-          PostWithNumberId.destroyAll(function () {
-            PostWithNumberUnderscoreId.destroyAll(function () {
-              PostWithStringId.destroyAll(function () {
-                done();
-              });
-            });
-          });
-        });
+  describe('datasource init', function() {
+      it('should respond with {}.connected true', function(done) {
+          db = getDataSource();
+          should(db.connected).be.ok;
+          done();
       });
-    });
-  });
+  })
 
   describe('.ping(cb)', function() {
     it('should return true for valid connection', function(done) {
-      db.ping(done);
+      db.ping(function(success) {
+          should(success).be.ok;
+          done();
+      });
+
     });
 
     it('should report connection errors', function(done) {
@@ -102,10 +114,28 @@ describe('Aerospike connector', function () {
         host: 'localhost',
         port: 4 // unassigned by IANA
       });
-      ds.ping(function(err) {
-        (!!err).should.be.true;
-        err.message.should.match(/connect ECONNREFUSED/);
-        done();
+      ds.ping(function(success) {
+          console.log(success);
+          should(success).not.be.ok;
+          done();
+      });
+    });
+  });
+
+
+  it('should create indexes', function (done) {
+    db.automigrate('User', function () {
+      db.connector.db.collection('User').indexInformation(function (err, result) {
+
+        var indexes =
+        { _id_: [ [ '_id', 1 ] ],
+          name_age_index: [ [ 'name', 1 ], [ 'age', -1 ] ],
+          age_index: [ [ 'age', -1 ] ],
+          name_1: [ [ 'name', 1 ] ],
+          email_1: [ [ 'email', 1 ] ] };
+
+        indexes.should.eql(result);
+        done(err, result);
       });
     });
   });
