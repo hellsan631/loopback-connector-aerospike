@@ -23,7 +23,7 @@
     "loopback-datasource-juggler": "^2.15.0",
     "mocha": "^2.1.0",
     "rc": "^1.0.0",
-    "should": "^5.0.0",
+    "should": "^6.0.0",
     "sinon": "^1.14.1"
   }
 }
