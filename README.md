@@ -10,4 +10,3 @@ Connect Loopback to an Aerospike Database
 - [AS Feature Guide](http://www.aerospike.com/docs/guide/kvs.html)
 - [LB Couchbase Connector](https://github.com/guardly/loopback-connector-couchbase/blob/master/lib/cb.js)
 - [LB MongoDB Connector](https://github.com/strongloop/loopback-connector-mongodb/blob/master/lib/mongodb.js)
-- [LB Datasource Juggler Tests](https://github.com/strongloop/loopback-datasource-juggler/tree/master/test)
