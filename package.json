@@ -16,6 +16,7 @@
   "dependencies": {
     "aerospike": "^1.0.39",
     "async": "^1.1.0",
+    "crypto": "0.0.3",
     "debug": "^2.1.1",
     "lodash": "^3.9.3",
     "loopback-connector": "2.x"

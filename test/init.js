@@ -29,4 +29,4 @@ global.getDataSource = global.getSchema = function(customConfig) {
   return db;
 };
 
-suite(global.getDataSource(), module.exports);
+//suite(global.getDataSource(), module.exports);
