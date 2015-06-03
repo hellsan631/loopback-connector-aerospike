@@ -10,7 +10,8 @@ var config = require('rc')('loopback', {test: {aerospike: {
     host: 'localhost',
     port: 3000
 }}}).test.aerospike;
-var suite = require('loopback-datasource-juggler/test/persistence-hooks.suite.js');
+
+var suite = require('persistence-hooks.suite.js');
 
 if (process.env.CI) {
   config = {
