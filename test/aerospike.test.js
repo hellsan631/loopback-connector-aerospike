@@ -1,305 +1,600 @@
 // This test written in mocha+should.js
 var should = require('./init.js');
+var async = require('async');
 
 var User, Post, db;
 
-require('loopback-datasource-juggler/test/basic-querying.test.js');
+describe('basic-querying', function () {
 
-describe('Aerospike connector', function () {
+    before(function (done) {
+        db = getSchema();
+        User = db.define('User', {
+            seq: {type: Number, index: true},
+            name: {type: String, index: true, sort: true},
+            email: {type: String, index: true},
+            birthday: {type: Date, index: true},
+            role: {type: String, index: true},
+            order: {type: Number, index: true, sort: true},
+            vip: {type: Boolean}
+        });
 
-    // before(function (done) {
-    //
-    //   User.hasMany(Post);
-    //   Post.belongsTo(User);
-    // });
+        db.automigrate(done);
 
-    beforeEach(function (done) {
-        if(User && Post) {
-            User.destroyAll(function () {
-              Post.destroyAll(function () {
-                  done();
-              });
-            });
-        }
     });
 
-    describe('datasource init', function() {
-        it('should respond with {}.connected true', function(done) {
-            db = getDataSource();
-            should(db.connected).be.ok;
+    describe('ping', function () {
+        it('should be able to test connections', function (done) {
+            db.ping(function (err) {
+                should.not.exist(err);
+                done();
+            });
+        });
+    });
+
+    describe('findById', function () {
+
+        before(function (done) {
+            User.destroyAll(done);
+        });
+
+        it('should query by id: not found', function (done) {
+            User.findById(1, function (err, u) {
+                should.not.exist(u);
+                should.not.exist(err);
+                done();
+            });
+        });
+
+        it('should query by id: found', function (done) {
+            User.create(function (err, u) {
+                should.not.exist(err);
+                should.exist(u.id);
+                User.findById(u.id, function (err, u) {
+                    should.exist(u);
+                    should.not.exist(err);
+                    u.should.be.an.instanceOf(User);
+                    done();
+                });
+            });
+        });
+
+    });
+
+    describe('findByIds', function () {
+        var createdUsers;
+        before(function(done) {
+            var people = [
+                { name: 'a', vip: true },
+                { name: 'b' },
+                { name: 'c' },
+                { name: 'd', vip: true },
+                { name: 'e' },
+                { name: 'f' }
+            ];
+            db.automigrate(['User'], function(err) {
+                User.create(people, function(err, users) {
+                    should.not.exist(err);
+                    // Users might be created in parallel and the generated ids can be
+                    // out of sequence
+                    createdUsers = users;
+                    done();
+                });
+            });
+        });
+
+        it('should query by ids', function(done) {
+            User.findByIds(
+                [createdUsers[2].id, createdUsers[1].id, createdUsers[0].id],
+                function(err, users) {
+                    should.exist(users);
+                    should.not.exist(err);
+                    var names = users.map(function(u) {
+                        return u.name;
+                    });
+                    names.should.eql(
+                        [createdUsers[2].name, createdUsers[1].name, createdUsers[0].name]);
+                        done();
+                    });
+                });
+
+                it('should query by ids and condition', function(done) {
+                    User.findByIds([
+                        createdUsers[0].id,
+                        createdUsers[1].id,
+                        createdUsers[2].id,
+                        createdUsers[3].id],
+                        { where: { vip: true } }, function(err, users) {
+                            should.exist(users);
+                            should.not.exist(err);
+                            var names = users.map(function(u) {
+                                return u.name;
+                            });
+                            names.should.eql(createdUsers.slice(0, 4).
+                            filter(function(u) {
+                                return u.vip;
+                            }).map(function(u) {
+                                return u.name;
+                            }));
+                            done();
+                        });
+                    });
+
+                });
+
+                describe('find', function () {
+
+                    before(seed);
+
+                    it('should query collection', function (done) {
+                        User.find(function (err, users) {
+                            should.exists(users);
+                            should.not.exists(err);
+                            users.should.have.lengthOf(6);
+                            done();
+                        });
+                    });
+
+                    it('should query limited collection', function (done) {
+                        User.find({limit: 3}, function (err, users) {
+                            should.exists(users);
+                            should.not.exists(err);
+                            users.should.have.lengthOf(3);
+                            done();
+                        });
+                    });
+
+                    it('should fail query with skip', function () {
+                        (function(){
+                            User.find({skip: 1}, function (err, users) {
+
+                            });
+                        }).should.throw('Using `skip` in a query is not supported by aerospike');
+                    });
+
+                    it('should fail query with order', function () {
+                        (function(){
+                            User.find({order: 'seq'}, function (err, users) {
+
+                            });
+                        }).should.throw('Using `order` in a query is not supported by aerospike');
+
+                    });
+
+                    it('should fail query with offset', function () {
+                        (function(){
+                            User.find({offset: 2}, function (err, users) {
+
+                            });
+                        }).should.throw('Using `offset` in a query is not supported by aerospike');
+
+                    });
+
+                    it('should query filtered collection', function (done) {
+                        User.find({where: {role: 'lead'}}, function (err, users) {
+                            should.exists(users);
+                            should.not.exists(err);
+                            users.should.have.lengthOf(2);
+                            done();
+                        });
+                    });
+
+                    it('should support "and" operator that is satisfied', function (done) {
+                        User.find({where: {and: [
+                            {name: 'John Lennon'},
+                            {role: 'lead'}
+                        ]}}, function (err, users) {
+                            should.not.exist(err);
+                            users.should.have.property('length', 1);
+                            done();
+                        });
+                    });
+
+                    it('should support "and" operator that is not satisfied', function (done) {
+                        User.find({where: {and: [
+                            {name: 'John Lennon'},
+                            {role: 'member'}
+                        ]}}, function (err, users) {
+                            should.not.exist(err);
+                            users.should.have.property('length', 0);
+                            done();
+                        });
+                    });
+
+                    it('should support "or" that is satisfied', function (done) {
+                        User.find({where: {or: [
+                            {name: 'John Lennon'},
+                            {role: 'lead'}
+                        ]}}, function (err, users) {
+                            should.not.exist(err);
+                            users.should.have.property('length', 2);
+                            done();
+                        });
+                    });
+
+                    it('should support "or" operator that is not satisfied', function (done) {
+                        User.find({where: {or: [
+                            {name: 'XYZ'},
+                            {role: 'Hello1'}
+                        ]}}, function (err, users) {
+                            should.not.exist(err);
+                            users.should.have.property('length', 0);
+                            done();
+                        });
+                    });
+
+                    it('should support date "gte" that is satisfied', function (done) {
+                        User.find({where: { birthday: { "gte": new Date('1980-12-08') }
+                    }}, function (err, users) {
+                        should.not.exist(err);
+                        users.should.have.property('length', 1);
+                        users[0].name.should.equal('John Lennon');
+                        done();
+                    });
+                });
+
+                it('should support date "gt" that is not satisfied', function (done) {
+                    User.find({where: { birthday: { "gt": new Date('1980-12-08') }
+                }}, function (err, users) {
+                    should.not.exist(err);
+                    users.should.have.property('length', 0);
+                    done();
+                });
+            });
+
+            it('should support date "gt" that is satisfied', function (done) {
+                User.find({where: { birthday: { "gt": new Date('1980-12-07') }
+            }}, function (err, users) {
+                should.not.exist(err);
+                users.should.have.property('length', 1);
+                users[0].name.should.equal('John Lennon');
+                done();
+            });
+        });
+
+        it('should support date "lt" that is satisfied', function (done) {
+            User.find({where: { birthday: { "lt": new Date('1980-12-07') }
+        }}, function (err, users) {
+            should.not.exist(err);
+            users.should.have.property('length', 1);
+            users[0].name.should.equal('Paul McCartney');
             done();
         });
-    })
-
-    describe('.ping(cb)', function() {
-        it('should return true for valid connection', function(done) {
-            db.ping(function(success) {
-                should(success).be.ok;
-                done();
-            });
-
-        });
-
-        // Test removed for now until:
-        // https://github.com/aerospike/aerospike-client-nodejs/issues/58
-        // is fixed, until then this test will always fail.
-        //
-        // it('should report connection errors', function(done) {
-        //   var ds = getDataSource({
-        //     host: 'localhost',
-        //     port: 4 // unassigned by IANA
-        //   });
-        //   ds.ping(function(success) {
-        //       console.log(success)
-        //       should(success).equal(false);
-        //       done();
-        //   });
-        // });
     });
 
-    describe('Model creation', function() {
-        it('should define a basic model', function() {
-            Post = db.define('Post', {
-                title: { type: String, length: 255},
-                content: { type: String },
-                comments: [String],
-                image: Buffer
-            }, {
-                aerospike: {
-                    idField: 'title'
-                }
-            });
-        });
-        it('define a model with basic indexes', function() {
-            Superhero = db.define('Superhero', {
-                name: { type: String, index: true },
-                power: { type: String, index: true, unique: true },
-                address: { type: String, required: false },
-                description: { type: String, required: false },
-                age: Number,
-                icon: Buffer
-            });
-        });
-    });
-    describe('Model instance creation', function() {
-        it('create should return post with added id field', function (done) {
-            Post.create({title: 'Post1', content: 'Post content'}, function (err, post) {
-                should.not.exist(err);
-                should.exist(post.id);
-                should.exist(post.title);
-                should.exist(post.content);
-
-                done();
-            });
-        });
-        it('create should return post with provided id field', function (done) {
-            Post.create({id:'foo', title: 'Post2', content: 'Post content'}, function (err, post) {
-                should.not.exist(err);
-                should.exist(post.id);
-                should.exist(post.title);
-                should.exist(post.content);
-
-                done();
-            });
-        });
-
-        it('should support Buffer type', function (done) {
-            Post.create({title: 'Johns close up', content: 'here is it!', image: new Buffer('1a2')}, function (e, u) {
-                Post.findById(u.id, function (e, post) {
-                    post.image.should.be.an.instanceOf(Buffer);
-                    done();
-                });
-            });
-        });
-
-    });
-
-    describe('Model instance query', function() {
-        it('should allow to find by id using where', function (done) {
-            Post.create({title: 'Post1', content: 'Post1 content'}, function (err, p1) {
-                Post.create({title: 'Post2', content: 'Post2 content'}, function (err, p2) {
-                    Post.find({where: {id: p1.id}}, function (err, p) {
-                        should.not.exist(err);
-                        should.exist(p && p[0]);
-                        p.length.should.be.equal(1);
-                        // Not strict equal
-                        p[0].id.should.be.eql(p1.id);
-                        done();
-                    });
-                });
-            });
-        });
-
-        it('should allow to find by bin using where', function (done) {
-            Post.create({title: 'Post1', content: 'Post1 content'}, function (err, p1) {
-                Post.create({title: 'Post2', content: 'Post2 content'}, function (err, p2) {
-                    Post.create({title: 'Post3', content: 'Post2 content'}, function (err, p2) {
-                        Post.find({where: {content: 'Post2 content'}}, function (err, p) {
-                            should.not.exist(err);
-                            should.exist(p && p[0]);
-                            p.length.should.be.equal(2);
-                            // Not strict equal
-                            p[0].id.should.be.eql(p1.id);
-                            done();
-                        });
-                    });
-                });
-            });
-        });
-
-        it('should allow to find by bin using where when bin is mapped to the id', function (done) {
-            Post.create({title: 'Post1', content: 'Post1 content'}, function (err, p1) {
-                Post.find({where: {title: 'Post 1'}}, function (err, p) {
-                    should.not.exist(err);
-                    should.exist(p && p[0]);
-                    p.length.should.be.equal(1);
-                    // Not strict equal
-                    p[0].id.should.be.eql(p1.id);
-                    done();
-                });
-            });
-        });
-
-        it('should allow to find by id using where inq', function (done) {
-            Post.create({title: 'Post1', content: 'Post1 content'}, function (err, p1) {
-                Post.create({title: 'Post2', content: 'Post2 content'}, function (err, p2) {
-                    Post.find({where: {id: {inq: [p1.id]}}}, function (err, p) {
-                        should.not.exist(err);
-                        should.exist(p && p[0]);
-                        p.length.should.be.equal(1);
-                        // Not strict equal
-                        p[0].id.should.be.eql(p1.id);
-                        done();
-                    });
-                });
-            });
-        });
-
-
-
-        it('should support "and" operator that is satisfied', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {and: [{title: 'My Post'}, {content: 'Hello'}]}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 1);
-                    done();
-                });
-            });
-        });
-
-        it('should support "and" operator that is not satisfied', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {and: [{title: 'My Post'}, {content: 'Hello1'}]}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 0);
-                    done();
-                });
-            });
-        });
-
-        it('should support "or" that is satisfied', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {or: [{title: 'My Post'}, {content: 'Hello1'}]}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 1);
-                    done();
-                });
-            });
-        });
-
-        it('should support "or" operator that is not satisfied', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {or: [{title: 'My Post1'}, {content: 'Hello1'}]}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 0);
-                    done();
-                });
-            });
-        });
-
-        it('should support "nor" operator that is satisfied', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {nor: [{title: 'My Post1'}, {content: 'Hello1'}]}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 1);
-                    done();
-                });
-            });
-        });
-
-        it('should support "nor" operator that is not satisfied', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {nor: [{title: 'My Post'}, {content: 'Hello1'}]}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 0);
-                    done();
-                });
-            });
-        });
-
-        it('should support neq for match', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {title: {neq: 'XY'}}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 1);
-                    done();
-                });
-            });
-        });
-
-        it('should support neq for no match', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.find({where: {title: {neq: 'My Post'}}}, function (err, posts) {
-                    should.not.exist(err);
-                    posts.should.have.property('length', 0);
-                    done();
-                });
-            });
-        });
-
-        // The where object should be parsed by the connector
-        it('should support where for count', function (done) {
-            Post.create({title: 'My Post', content: 'Hello'}, function (err, post) {
-                Post.count({and: [{title: 'My Post'}, {content: 'Hello'}]}, function (err, count) {
-                    should.not.exist(err);
-                    count.should.be.equal(1);
-                    Post.count({and: [{title: 'My Post1'}, {content: 'Hello'}]}, function (err, count) {
-                        should.not.exist(err);
-                        count.should.be.equal(0);
-                        done();
-                    });
-                });
-            });
-        });
-
-        // The where object should be parsed by the connector
-        it('should support where for destroyAll', function (done) {
-            Post.create({title: 'My Post1', content: 'Hello'}, function (err, post) {
-                Post.create({title: 'My Post2', content: 'Hello'}, function (err, post) {
-                    Post.destroyAll({and: [
-                        {title: 'My Post1'},
-                        {content: 'Hello'}
-                    ]}, function (err) {
-                        should.not.exist(err);
-                        Post.count(function (err, count) {
-                            should.not.exist(err);
-                            count.should.be.equal(1);
-                            done();
-                        });
-                    });
-                });
-            });
-        });
-    });
-
-
-    after(function (done) {
-        if(User && Post) {
-            User.destroyAll(function () {
-              Post.destroyAll(function () {
-                  done();
-              });
-            });
-        }
+    it('should support number "gte" that is satisfied', function (done) {
+        User.find({where: { order: { "gte":  3}
+    }}, function (err, users) {
+        should.not.exist(err);
+        users.should.have.property('length', 4);
+        users[0].name.should.equal('George Harrison');
+        done();
     });
 });
+
+it('should support number "gt" that is not satisfied', function (done) {
+    User.find({where: { order: { "gt": 6 }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 0);
+    done();
+});
+});
+
+it('should support number "gt" that is satisfied', function (done) {
+    User.find({where: { order: { "gt": 5 }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 1);
+    users[0].name.should.equal('Ringo Starr');
+    done();
+});
+});
+
+it('should support number "lt" that is satisfied', function (done) {
+    User.find({where: { order: { "lt": 2 }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 1);
+    users[0].name.should.equal('Paul McCartney');
+    done();
+});
+});
+
+it('should support number "gt" that is satisfied by null value', function (done) {
+    User.find({where: { order: { "gt": null }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 0);
+    done();
+});
+});
+
+it('should support number "lt" that is not satisfied by null value', function (done) {
+    User.find({where: { order: { "lt": null }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 0);
+    done();
+});
+});
+
+it('should support string "gte" that is satisfied by null value', function (done) {
+    User.find({where: { name: { "gte":  null}
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 0);
+    done();
+});
+});
+
+it('should support string "gte" that is satisfied', function (done) {
+    User.find({where: { name: { "gte":  'Paul McCartney'}
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 4);
+    users[0].name.should.equal('Paul McCartney');
+    done();
+});
+});
+
+it('should support string "gt" that is not satisfied', function (done) {
+    User.find({where: { name: { "gt": 'xyz' }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 0);
+    done();
+});
+});
+
+it('should support string "gt" that is satisfied', function (done) {
+    User.find({where: { name: { "gt": 'Paul McCartney' }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 3);
+    users[0].name.should.equal('Ringo Starr');
+    done();
+});
+});
+
+it('should support string "lt" that is satisfied', function (done) {
+    User.find({where: { name: { "lt": 'Paul McCartney' }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 2);
+    users[0].name.should.equal('John Lennon');
+    done();
+});
+});
+
+it('should support boolean "gte" that is satisfied', function (done) {
+    User.find({where: { vip: { "gte":  true}
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 3);
+    users[0].name.should.equal('John Lennon');
+    done();
+});
+});
+
+it('should support boolean "gt" that is not satisfied', function (done) {
+    User.find({where: { vip: { "gt": true }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 0);
+    done();
+});
+});
+
+it('should support boolean "gt" that is satisfied', function (done) {
+    User.find({where: { vip: { "gt": false }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 3);
+    users[0].name.should.equal('John Lennon');
+    done();
+});
+});
+
+it('should support boolean "lt" that is satisfied', function (done) {
+    User.find({where: { vip: { "lt": true }
+}}, function (err, users) {
+    should.not.exist(err);
+    users.should.have.property('length', 2);
+    users[0].name.should.equal('George Harrison');
+    done();
+});
+});
+
+
+it('should only include fields as specified', function (done) {
+    var remaining = 0;
+
+    function sample(fields) {
+
+        return {
+            expect: function (arr) {
+                remaining++;
+                User.find({fields: fields}, function (err, users) {
+
+                    remaining--;
+                    if (err) return done(err);
+
+                    should.exists(users);
+
+                    if (remaining === 0) {
+                        done();
+                    }
+
+                    users.forEach(function (user) {
+                        var obj = user.toObject();
+
+                        Object.keys(obj)
+                        .forEach(function (key) {
+                            // if the obj has an unexpected value
+                            if (obj[key] !== undefined && arr.indexOf(key) === -1) {
+                                console.log('Given fields:', fields);
+                                console.log('Got:', key, obj[key]);
+                                console.log('Expected:', arr);
+                                throw new Error('should not include data for key: ' + key);
+                            }
+                        });
+                    });
+                });
+            }
+        }
+    }
+
+    sample({name: true}).expect(['name']);
+    sample({name: false}).expect(['id', 'seq', 'email', 'role', 'order', 'birthday', 'vip']);
+    sample({name: false, id: true}).expect(['id']);
+    sample({id: true}).expect(['id']);
+    sample('id').expect(['id']);
+    sample(['id']).expect(['id']);
+    sample(['email']).expect(['email']);
+});
+
+});
+
+describe('count', function () {
+
+    before(seed);
+
+    it('should query total count', function (done) {
+        User.count(function (err, n) {
+            should.not.exist(err);
+            should.exist(n);
+            n.should.equal(6);
+            done();
+        });
+    });
+
+    it('should query filtered count', function (done) {
+        User.count({role: 'lead'}, function (err, n) {
+            should.not.exist(err);
+            should.exist(n);
+            n.should.equal(2);
+            done();
+        });
+    });
+});
+
+describe('findOne', function () {
+
+    before(seed);
+
+    it('should find first record (default sort by id)', function (done) {
+        User.all({order: 'id'}, function (err, users) {
+            User.findOne(function (e, u) {
+                should.not.exist(e);
+                should.exist(u);
+                u.id.toString().should.equal(users[0].id.toString());
+                done();
+            });
+        });
+    });
+
+    it('should find first record', function (done) {
+        User.findOne({order: 'order'}, function (e, u) {
+            should.not.exist(e);
+            should.exist(u);
+            u.order.should.equal(1);
+            u.name.should.equal('Paul McCartney');
+            done();
+        });
+    });
+
+    it('should find last record', function (done) {
+        User.findOne({order: 'order DESC'}, function (e, u) {
+            should.not.exist(e);
+            should.exist(u);
+            u.order.should.equal(6);
+            u.name.should.equal('Ringo Starr');
+            done();
+        });
+    });
+
+    it('should find last record in filtered set', function (done) {
+        User.findOne({
+            where: {role: 'lead'},
+            order: 'order DESC'
+        }, function (e, u) {
+            should.not.exist(e);
+            should.exist(u);
+            u.order.should.equal(2);
+            u.name.should.equal('John Lennon');
+            done();
+        });
+    });
+
+    it('should work even when find by id', function (done) {
+        User.findOne(function (e, u) {
+            User.findOne({where: {id: u.id}}, function (err, user) {
+                should.not.exist(err);
+                should.exist(user);
+                done();
+            });
+        });
+    });
+
+});
+
+describe('exists', function () {
+
+    before(seed);
+
+    it('should check whether record exist', function (done) {
+        User.findOne(function (e, u) {
+            User.exists(u.id, function (err, exists) {
+                should.not.exist(err);
+                should.exist(exists);
+                exists.should.be.ok;
+                done();
+            });
+        });
+    });
+
+    it('should check whether record not exist', function (done) {
+        User.destroyAll(function () {
+            User.exists(42, function (err, exists) {
+                should.not.exist(err);
+                exists.should.not.be.ok;
+                done();
+            });
+        });
+    });
+});
+});
+
+function seed(done) {
+    var beatles = [
+        {
+            seq: 0,
+            name: 'John Lennon',
+            email: 'john@b3atl3s.co.uk',
+            role: 'lead',
+            birthday: new Date('1980-12-08'),
+            order: 2,
+            vip: true
+        },
+        {
+            seq: 1,
+            name: 'Paul McCartney',
+            email: 'paul@b3atl3s.co.uk',
+            role: 'lead',
+            birthday: new Date('1942-06-18'),
+            order: 1,
+            vip: true
+        },
+        {seq: 2, name: 'George Harrison', order: 5, vip: false},
+        {seq: 3, name: 'Ringo Starr', order: 6, vip: false},
+        {seq: 4, name: 'Pete Best', order: 4},
+        {seq: 5, name: 'Stuart Sutcliffe', order: 3, vip: true}
+    ];
+
+    async.series([
+        User.destroyAll.bind(User),
+        function(cb) {
+            async.each(beatles, User.create.bind(User), cb);
+        }
+    ], done);
+}
