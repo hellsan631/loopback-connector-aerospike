@@ -134,6 +134,15 @@ describe('basic-querying', function () {
                         });
                     });
 
+                    it('should query notEqual collection', function (done) {
+                        User.find({where: {name: {neq : 'a'}}}, function (err, users) {
+                            should.exists(users);
+                            should.not.exists(err);
+                            users.should.have.lengthOf(5);
+                            done();
+                        });
+                    });
+
                     it('should query limited collection', function (done) {
                         User.find({limit: 3}, function (err, users) {
                             should.exists(users);
