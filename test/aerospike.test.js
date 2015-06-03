@@ -148,7 +148,7 @@ describe('basic-querying', function () {
                             User.find({skip: 1}, function (err, users) {
 
                             });
-                        }).should.throw('Using `skip` in a query is not supported by aerospike');
+                        }).should.throw('Using `offset` or `skip` in a query is not supported by aerospike');
                     });
 
                     it('should fail query with order', function () {
@@ -165,7 +165,7 @@ describe('basic-querying', function () {
                             User.find({offset: 2}, function (err, users) {
 
                             });
-                        }).should.throw('Using `offset` in a query is not supported by aerospike');
+                        }).should.throw('Using `offset` or `skip` in a query is not supported by aerospike');
 
                     });
 
